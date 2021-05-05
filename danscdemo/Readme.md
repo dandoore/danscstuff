@@ -8,4 +8,4 @@ Added experimental ZX Spectum mode (not fully working yet)
 
 SAM Music by David Sanders using z88DK PSG/etracker player
 
-ZX Music by Yerzmyey using https://github.com/stefanbylund/vt_sound player
+ZX Music by Yerzmyey using z88DK PSG/VT2 player
