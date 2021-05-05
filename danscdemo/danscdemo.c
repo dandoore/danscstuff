@@ -38,16 +38,16 @@
 // ZX Spectrum (Experimental)
 // ==========================
 //
-// zcc +zx danscdemo.c -lm -lndos -create-app -pragma-define:CRT_STACK_SIZE=2048 -pragma-redirect=CRT_FONT=_font_8x8_clairsys_bold
+// zcc +zx danscdemo.c zx_cdemo.asm -lm -lndos -create-app -pragma-define:CRT_STACK_SIZE=2048 -pragma-redirect=CRT_FONT=_font_8x8_clairsys_bold
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <conio.h>
 #include <graphics.h>
 #include <intrinsic.h>
+#include <interrupt.h>
 
 #if defined(SAM)
-#include <interrupt.h>
 #include <psg/etracker.h>
 #include <sys/ioctl.h>
 #include <arch/sam.h>
@@ -55,19 +55,7 @@
 
 #if defined(SPECTRUM)
 #include <spectrum.h>
-#include <input.h>
-#include <arch/z80.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-#include <vt_sound.h>
-#endif
-
-// Pragmas
-
-#if defined(SPECTRUM)
-#pragma output CRT_ORG_CODE = 0x8184
-#pragma output CLIB_MALLOC_HEAP_SIZE = 0
+#include <psg/vt2.h>
 #endif
 
 // Prototypes
@@ -77,7 +65,8 @@ void playmusic();
 void setup_int();
 #endif
 #if defined(SPECTRUM)
-static void init_isr();
+void playmusic();
+void setup_int();
 #endif
 
 void fade(int x, int *y);
@@ -165,8 +154,8 @@ void main()
 {
 #if defined(SAM)
 int	mode=4;
-
 console_ioctl(IOCTL_GENCON_SET_MODE,&mode);
+
 saa_etracker_init(&mysong);
 setup_int();
 #endif
@@ -177,9 +166,10 @@ textcolor(TEXT);
 textbackground(BACK);
 zx_border(BACK);
 clrscr();
-vt_init(music_module);
-init_isr();
 
+ay_vt2_init(&mysong);
+ay_vt2_start();
+setup_int();
 #endif
 
 while (1)
@@ -201,22 +191,21 @@ exit(0);
 
 #if defined(SPECTRUM)
 
-extern uint8_t music_module[];			// ProTracker3 tune
+extern vt2_song mysong;
 
-static void init_isr(void)
-{
-    // Set up IM2 interrupt service routine:
-    // Put Z80 in IM2 mode with a 257-byte interrupt vector table located
-    // at 0x8000 (before CRT_ORG_CODE) filled with 0x81 bytes. Install the
-    // vt_play_isr() interrupt service routine at the interrupt service routine
-    // entry at address 0x8181.
+void setup_int() {
 
-    intrinsic_di();
-    im2_init((void *) 0x8000);
-    memset((void *) 0x8000, 0x81, 257);
-    z80_bpoke(0x8181, 0xC3);
-    z80_wpoke(0x8182, (uint16_t) vt_play_isr);
-    intrinsic_ei();
+   zx_im2_init(0xd300, 0xd4);
+   add_raster_int(0x38);
+   add_raster_int(playmusic);
+}
+
+void playmusic(void) {
+   M_PRESERVE_MAIN;
+   M_PRESERVE_INDEX;
+   ay_vt2_play();
+   M_RESTORE_INDEX;
+   M_RESTORE_MAIN;
 }
 #endif
 

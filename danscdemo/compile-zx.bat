@@ -3,10 +3,11 @@ REM
 REM Windows Batch file for launching ZCC to compile ZX executables and lauch them in FUSE
 
 set FILE=danscdemo
+
 set EMUPATH="C:\Program Files (x86)\Fuse\fuse.exe"
 
 echo Compiling %FILE%.c... 
-zcc +zx -v -SO3 -startup=1 -clib=sdcc_iy --max-allocs-per-node200000 %FILE%.c zx_cdemo.asm -o %FILE% -create-app -pragma-define:CRT_STACK_SIZE=2048 -pragma-redirect=CRT_FONT=_font_8x8_clairsys_bold
+zcc +zx -v %FILE%.c zx_cdemo.asm -lndos -o %FILE% -create-app -pragma-define:CRT_STACK_SIZE=2048 -pragma-redirect=CRT_FONT=_font_8x8_clairsys_bold
 
 IF NOT %ERRORLEVEL% == 0  GOTO FAIL
 

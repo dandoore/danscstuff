@@ -6,7 +6,7 @@
 
 SECTION rodata_user
 
-PUBLIC _music_module
+PUBLIC _mysong
 
-_music_module:
+_mysong:
 BINARY "Yerzmyey-RealLifeSuperHero.pt3"
