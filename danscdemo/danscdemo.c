@@ -30,13 +30,16 @@
 // SAM Coupé (Native)
 // ==================
 //
-// The ASM contains the includes for the SAM font and Etracker music, use -pragma-redirect:CRT_FONT=_font to enable font
+// The ASM contains the includes for the SAM font and Etracker music, use -pragma-redirect:CRT_FONT=_font to enable custom font
 // Increase the stack size for the arrays for Trailblazer and Life with -pragma-define:CRT_STACK_SIZE=2048
 //
 // zcc +sam danscdemo.c cdemo.asm -lm -lndos -create-app -pragma-redirect:CRT_FONT=_font -pragma-define:CRT_STACK_SIZE=2048 
 //
-// ZX Spectrum (Experimental)
-// ==========================
+// ZX Spectrum
+// ===========
+//
+// The ASM contains the includes for the ProTracker 3 music, use -pragma-redirect:CRT_FONT=_font_8x8_clairsys_bold to enable different font
+// Increase the stack size for the arrays for Trailblazer and Life with -pragma-define:CRT_STACK_SIZE=2048
 //
 // zcc +zx danscdemo.c zx_cdemo.asm -lm -lndos -create-app -pragma-define:CRT_STACK_SIZE=2048 -pragma-redirect=CRT_FONT=_font_8x8_clairsys_bold
 
@@ -60,15 +63,10 @@
 
 // Prototypes
 
-#if defined(SAM)
+#if defined(SAM) || defined (SPECTRUM)
 void playmusic();
 void setup_int();
 #endif
-#if defined(SPECTRUM)
-void playmusic();
-void setup_int();
-#endif
-
 void fade(int x, int *y);
 void fadedown(int x, int *y);
 void fadeup(int x, int *y);
@@ -99,6 +97,8 @@ void outprinty(int x, char *y);
 
 #define TEXT 7		// Default foreground colour
 #define BACK 0		// Default background colour
+#define SAMINVIS 4	// Invisible text colour for SAM
+#define SPECINVIS 8	// Invisible text colour for ZX
 
 #define TRAILS 40   // Number of 'trails' for Trailblazer
 #define MINX 0		// Trailblazer
@@ -142,8 +142,8 @@ char fullcopper[16] = { 0,4,12,66,64,72,68,76,68,72,64,66,12,4,0,127 };
 
 int moveon,count,speed,cx,cy;
 
-int starx[STARS],stary[STARS];
-int pstarx[PSTARS],pstary[PSTARS],pstars[PSTARS];
+int starx[STARS],stary[STARS],starskip[STARS];
+int pstarx[PSTARS],pstary[PSTARS],pstars[PSTARS],pstarskip[PSTARS];
 
 char world[ROWS][COLS];
 int popul,gen,crow,ccol;
@@ -153,20 +153,24 @@ int popul,gen,crow,ccol;
 void main()
 {
 #if defined(SAM)
+
+// Screen setup
 int	mode=4;
 console_ioctl(IOCTL_GENCON_SET_MODE,&mode);
-
+// Music setup
 saa_etracker_init(&mysong);
 setup_int();
 #endif
 
 #if defined(SPECTRUM)
+
+// Screen setup
 printf("%c%c\n",1,32);		// 32 column mode
 textcolor(TEXT);
 textbackground(BACK);
 zx_border(BACK);
 clrscr();
-
+// Music setup
 ay_vt2_init(&mysong);
 ay_vt2_start();
 setup_int();
@@ -195,17 +199,17 @@ extern vt2_song mysong;
 
 void setup_int() {
 
-   zx_im2_init(0xd300, 0xd4);
-   add_raster_int(0x38);
-   add_raster_int(playmusic);
+zx_im2_init(0xd300, 0xd4);
+add_raster_int(0x38);
+add_raster_int(playmusic);
 }
 
 void playmusic(void) {
-   M_PRESERVE_MAIN;
-   M_PRESERVE_INDEX;
-   ay_vt2_play();
-   M_RESTORE_INDEX;
-   M_RESTORE_MAIN;
+M_PRESERVE_MAIN;
+M_PRESERVE_INDEX;
+ay_vt2_play();
+M_RESTORE_INDEX;
+M_RESTORE_MAIN;
 }
 #endif
 
@@ -354,7 +358,7 @@ void blank(int lineno, char *message)
 gotoxy((32-strlen(message))/2,lineno);
 
 #if defined(SAM)
-textcolor(BACK);
+textcolor(SAMINVIS);			// Since POINT(X,Y) can't distinguish colours yet make the text invisible but still there so that stars will not overprint it
 printf("%s",message);
 smove();
 #endif
@@ -362,6 +366,7 @@ smove();
 int x;
 for (x=0;x<=strlen(message);x++)
 	{
+	textcolor(SPECINVIS);		// Make the text invisible but still there so that stars will not overprint it
 	printf(" ");	
 	if (keypress()) break;
 	smove();
@@ -388,7 +393,14 @@ for (count=0;count<= (STARS-1);count++ )
     starx[count] = (rnd(SPREAD)+(cx-(SPREAD/2)));
     stary[count] = (rnd(SPREAD)+(cy-(SPREAD/2)));
     if (point(starx[count],stary[count]) == NULL)
+		{
+	    starskip[count] = 0;
         plot(starx[count],stary[count]);
+		}
+	else
+		{
+		starskip[count] = 1;
+		}
     }
 }
 
@@ -399,6 +411,7 @@ void smove()
 int dx,dy,newx,newy,birth;
 
 //intrinsic_halt();  // Wait for start of next frame
+
 for (count=0;count<= (STARS-1);count++ )
     {
 
@@ -420,57 +433,63 @@ for (count=0;count<= (STARS-1);count++ )
         newy = (rnd(SPREAD)+(cy - (SPREAD/2)));
         birth=1;
         }
+   // Remove old star position - should check that POINT(starx[count],stary[count])=0 i.e not printed text but this is not supported yet
    
-    #if defined(SAM)
-	if (point(starx[count],stary[count]) <= 3)
+	if (starskip[count] == 0)
 		{
+		#if defined(SAM)
 		textcolor(0);
 		plot(starx[count],stary[count]);
-		}
-	#endif
-	#if defined(SPECTRUM)
-	if (point(starx[count],stary[count]) == 1)
-		{
-		unplot(starx[count],stary[count]);
-		}
-    #endif
-	
-
-    if (point(newx,newy) == 0)
-    {
-    if (((abs (dx))+(abs (dy))) < 10)
-        {
-		#if defined(SAM)
-		textcolor(2);
 		#endif
 		#if defined(SPECTRUM)
-		textcolor(TEXT);
+		// ADD: UNPLOT ony if attribute of pixel is backgorund
+		unplot(starx[count],stary[count]);
 		#endif
-        if (((abs (dx))+(abs (dy))) < 3)
-           #if defined(SAM)
+		}
+	
+	// Plot new star position
+
+    if (point(newx,newy) == NULL) 		// ADD: PLOT ony if ZX attribute of pixel is background
+		{
+		starskip[count] = 0;
+		if (((abs (dx))+(abs (dy))) < 10)
+			{
+			#if defined(SAM)
+			textcolor(2);
+			#endif
+			#if defined(SPECTRUM)
+			textcolor(TEXT);
+			#endif
+			if (((abs (dx))+(abs (dy))) < 3)
+				#if defined(SAM)
+				textcolor(1);
+				#endif
+				#if defined(SPECTRUM)
+				textcolor(TEXT);
+				#endif
+			}
+		else
+			#if defined(SAM)
+			textcolor(3);
+			#endif
+			#if defined(SPECTRUM)
+			textcolor(TEXT);
+			#endif
+
+		if (birth) 
+			#if defined(SAM)
 			textcolor(1);
 			#endif
 			#if defined(SPECTRUM)
 			textcolor(TEXT);
 			#endif
-        }
-    else
-		#if defined(SAM)
-		textcolor(3);
-		#endif
-		#if defined(SPECTRUM)
-		textcolor(TEXT);
-		#endif
-
-    if (birth) 
-		#if defined(SAM)
-		textcolor(1);
-		#endif
-		#if defined(SPECTRUM)
-		textcolor(TEXT);
-		#endif
-    plot(newx,newy);
+			
+		plot(newx,newy);
     }
+		else
+		{
+		starskip[count] = 1;
+		}
     starx[count] = newx;
     stary[count] = newy;
     }

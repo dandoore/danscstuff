@@ -7,6 +7,8 @@
 SECTION rodata_user
 
 PUBLIC _mysong
-
+	
 _mysong:
-BINARY "Yerzmyey-RealLifeSuperHero.pt3"
+	  INCBIN "Yerzmyey-RealLifeSuperHero.pt3"
+
+
