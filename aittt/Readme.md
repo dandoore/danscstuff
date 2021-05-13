@@ -1,4 +1,4 @@
-*  A.I. Tic Tac Toe - a simple Tic Tac Toe game
+*A.I. Tic Tac Toe - a simple Tic Tac Toe game
 
 Copyright 2005 Marcello Zaniboni
 
