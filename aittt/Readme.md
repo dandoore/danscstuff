@@ -6,7 +6,7 @@ https://www.marcellozaniboni.net/zxaittt/index.html
 
 SAM Coupé conversion plus retatining support for compiling under ZX Spectrum
 
-# Sam Coupe build
+# Sam Coupé` build
 
 zcc +sam -O3 ttt.c -lm -v -lndos -o ttt.bin -pragma-define:CRT_STACK_SIZE=2048 -pragma-define:CLIB_DEFAULT_SCREEN_MODE=-1
 
