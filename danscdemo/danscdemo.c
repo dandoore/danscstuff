@@ -16,32 +16,32 @@
 // Parallax starfield was something I threw together and isn't
 // very efficient, but it works.
 //
-// Both starfields use palette pos 1-3 for the stars and operate
+// Both starfields use SAM palette pos 1-3 for the stars and operate
 // on a background of pos 0.  Stars will not trash objects in
 // the foreground if they don't contain any of the pot colours.
+// (Not supported in Z88DK yet)
 //
-// 2021 remix for Z88DK
-//
-// SAM SAA1099 Etracker by Pyramex
-// ZX AY Soundtracker by Yerzmyey
-//
-// Compilation under Z88DK (https://www.z88dk.org/
+// 2021 remix for Z88DK (https://www.z88dk.org/
 //
 // SAM Coupé (Native)
 // ==================
 //
+// SAM SAA1099 Etracker by Pyramex - Brutal 8 E (Altern-8)
+//
 // The ASM contains the includes for the SAM font and Etracker music, use -pragma-redirect:CRT_FONT=_font to enable custom font
-// Increase the stack size for the arrays for Trailblazer and Life with -pragma-define:CRT_STACK_SIZE=2048
+// Increase the stack size for the arrays with -pragma-define:CRT_STACK_SIZE=2048
 //
 // zcc +sam danscdemo.c cdemo.asm -lm -lndos -create-app -pragma-redirect:CRT_FONT=_font -pragma-define:CRT_STACK_SIZE=2048 
 //
 // ZX Spectrum
 // ===========
 //
+// ZX AY Soundtracker by Yerzmyey - Real Life Super Hero
+// 
 // The ASM contains the includes for the ProTracker 3 music, use -pragma-redirect:CRT_FONT=_font_8x8_clairsys_bold to enable different font
-// Increase the stack size for the arrays for Trailblazer and Life with -pragma-define:CRT_STACK_SIZE=2048
+// Lower ORG address and increase the stack size for the arrays with -pragma-define:CRT_STACK_SIZE=2048
 //
-// zcc +zx danscdemo.c zx_cdemo.asm -lm -lndos -create-app -pragma-define:CRT_STACK_SIZE=2048 -pragma-redirect=CRT_FONT=_font_8x8_clairsys_bold
+// zcc +zx -O3 -v -zorg=30000 danscdemo.c zx_cdemo.asm -lndos -create-app -pragma-define:CRT_STACK_SIZE=2048 -pragma-redirect=CRT_FONT=_font_8x8_clairsys_bold
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,18 +63,19 @@
 
 // Prototypes
 
-#if defined(SAM) || defined (SPECTRUM)
-void playmusic();
-void setup_int();
-#endif
+#if defined(SAM)
 void fade(int x, int *y);
 void fadedown(int x, int *y);
 void fadeup(int x, int *y);
+#endif
+void playmusic();
+void setup_int();
 int rnd(int x);
 int keypress();
 void cleary();
 void intro();
 void startstars();
+void preprinty(int x, int y, char *z);
 void printy(int x, int y, char *z);
 void blank(int x, char *y);
 void smove();
@@ -87,8 +88,8 @@ void outputlife();
 void outro();
 void pstartup();
 void psmove();
+void outpreprinty(int x, char *y);
 void outprinty(int x, char *y);
-
 
 // Defines
 
@@ -97,18 +98,18 @@ void outprinty(int x, char *y);
 
 #define TEXT 7		// Default foreground colour
 #define BACK 0		// Default background colour
+#define SAMTEXT	15	//  Default foreground colour SAM
 #define SAMINVIS 4	// Invisible text colour for SAM
-#define SPECINVIS 8	// Invisible text colour for ZX
 
 #define TRAILS 40   // Number of 'trails' for Trailblazer
-#define MINX 0		// Trailblazer
-#define	MINY 0		// Trailblazer
-#define OFFSET 10	// Trailblazer
-#define MAXX 255	// Trailblazer
-#define	MAXY 192	// Trailblazer
+#define OFFSET 10	// Trailblazer offset to avoid overprinting title
+#define MINX 0		// Trailblazer origin x
+#define	MINY 0		// Trailblazer origin y
+#define MAXX 255	// Trailblazer max x
+#define	MAXY 192	// Trailblazer max y
 
-#define ROWS  21    // Life size y 
-#define COLS  32    // Life size x 
+#define ROWS  21    // Life size y rows
+#define COLS  32    // Life size x columns
 #define LIFESEED	46256  // Because everyone wants a happy life. This seed is known good for 350 generations
 
 #define PSTARS 20   // Number of parallax stars in Outro
@@ -132,6 +133,9 @@ char mess8[] = "Music by Yerzmyey";
 #endif
 char mess9[] = "www.z88dk.org";
 
+#if defined(SAM)
+// Palette defintions
+
 int grey[7]   = { 119,120,112,15,7,8,0 };
 int red[7]    = { 38,39,34,40,32,2,0 };
 int blue[7]   = { 31,28,24,17,16,1,0 };
@@ -139,6 +143,7 @@ int copper[7] = { 68,72,64,66,12,4,0 };
 
 char defaultpal[16] = { 0,7,112,127,0,0,0,0,0,0,0,68,31,38,119,127 };
 char fullcopper[16] = { 0,4,12,66,64,72,68,76,68,72,64,66,12,4,0,127 };
+#endif
 
 int moveon,count,speed,cx,cy;
 
@@ -153,7 +158,6 @@ int popul,gen,crow,ccol;
 void main()
 {
 #if defined(SAM)
-
 // Screen setup
 int	mode=4;
 console_ioctl(IOCTL_GENCON_SET_MODE,&mode);
@@ -163,13 +167,16 @@ setup_int();
 #endif
 
 #if defined(SPECTRUM)
-
 // Screen setup
 printf("%c%c\n",1,32);		// 32 column mode
 textcolor(TEXT);
 textbackground(BACK);
 zx_border(BACK);
 clrscr();
+
+// Clear out anything in the keyboard first
+while (keypress());
+	
 // Music setup
 ay_vt2_init(&mysong);
 ay_vt2_start();
@@ -183,19 +190,22 @@ while (1)
 	#endif
 	intro();
 	cleary();
-	//trailblazer();
-	//cleary();
-	//life();
-	//cleary();
-	//outro();
-	//cleary();
+	trailblazer();
+	cleary();
+	life();
+	cleary();
+	outro();
+	cleary();
     }
 exit(0);
 }
 
-#if defined(SPECTRUM)
+// ZX VortexTracker tune
 
+#if defined(SPECTRUM)
 extern vt2_song mysong;
+
+// Setup interrupt tracker player
 
 void setup_int() {
 
@@ -203,6 +213,8 @@ zx_im2_init(0xd300, 0xd4);
 add_raster_int(0x38);
 add_raster_int(playmusic);
 }
+
+// Interrupt tracker player routine
 
 void playmusic(void) {
 M_PRESERVE_MAIN;
@@ -213,8 +225,10 @@ M_RESTORE_MAIN;
 }
 #endif
 
+// SAM Etracker tune
+
 #if defined(SAM)
-extern char mysong;			// Etracker tune
+extern char mysong;	
 
 // Setup interrupt tracker player
 
@@ -239,14 +253,21 @@ int rnd(int range)
 return abs(abs(rand())/(32768/range));
 }
 
-// Detect Keypress Routinr
+// Detect Keypress Routine
+//
+// This is a bit wacky at the moment due to ZX and SAM presenting keypresses differently
 
 int keypress()
 {
 char dummyval;
 	if (kbhit())
 		{
+		#if defined(SAM)
+		while (!kbhit());	// Suck up duplicates
+		#endif
+		#if defined(SPECTRUM)
 		dummyval=getch();
+		#endif
 		moveon=1;
 		return(1);
 		}
@@ -258,25 +279,30 @@ char dummyval;
 
 // Clear the screen in a slightly more interesting way
 // This is really slow at the moment :(
+// BUG: And doesn't work on ZX for some reason
 
 void cleary()
 {
+#if defined(SAM)
 int x;
-
 textcolor(BACK);
 for (x=MINX;x<= MAXX;x+= 2 )
 	{
 	draw(x,MINY,x,MAXY);
 	draw(MAXX-x,MINY,MAXX-x,MAXY);
 	}
+#endif
+
+#if defined(SPECTRUM)
+textcolor(TEXT);
+textbackground(BACK);
+zx_border(BACK);
+#endif
 
 #if defined(SAM)
 sam_load_palette(defaultpal);
 #endif
-#if defined(SPECTRUM)
-textcolor(TEXT);
-textbackground(BACK);
-#endif
+
 clrscr();
 }
 
@@ -285,7 +311,13 @@ clrscr();
 void intro()
 {
 moveon=0;
+#if defined(SAM)
+preprinty(2,11,mess1);
+preprinty(10,13,mess2);
+preprinty(18,12,mess3);
+#endif
 startstars();
+
 while (!keypress())
     {
     printy(2,11,mess1);
@@ -294,13 +326,19 @@ while (!keypress())
     if (moveon) break;
     printy(18,12,mess3);
     if (moveon) break;
-    fade(11,copper);
-    blank(2,mess1);
+    #if defined(SAM) 
+	fade(11,copper);
+    #endif
+	blank(2,mess1);
     if (moveon) break;
+	#if defined(SAM) 
     fade(13,red);
+	#endif
     blank(10,mess2);
     if (moveon) break;
+	#if defined(SAM) 
     fade(12,blue);
+	#endif
     blank(18,mess3);
 	if (moveon) break;
 	#if defined(SAM)
@@ -308,6 +346,18 @@ while (!keypress())
 	#endif
     }
 moveon=0;
+}
+
+// Routine for pre printing intro texts
+//
+// Kludge for lack of POINT(x,y) being able to return pen value rather than boolean - pre print message in black text :)
+
+
+void preprinty(int lineno, int colour, char *message)
+{
+gotoxy((32-strlen(message))/2,lineno);
+textcolor(SAMINVIS);
+printf("%s",message);
 }
 
 // Routine for printing intro texts
@@ -323,33 +373,32 @@ for (x=0;x< strlen(message);x++ )
 	textcolor(colour);
 	#endif
 	#if defined(SPECTRUM)
-	textcolor(colour-8);
+	textcolor(colour-10);
 	#endif
     printf("%c",message[x]);
-    if (keypress()) break;
+    if (keypress())
+		{
+		moveon=1;
+		break;
+		}
     smove();
     }
 }
 
 // Fade colour pot using a colour range
-
+#if defined(SAM)
 void fade(int colour, int *colset)
 {
 int x;
 
-#if defined(SAM)
 for (x=0;x<7;x++ )
     {
     sam_set_palette(colour,colset[x]);
     smove();
     if (keypress()) break;
     }
-#endif
-
-#if defined(SPECTRUM)
-   smove();
-#endif
 }
+#endif
 
 // Blank a text line without distrubing screen too much
 
@@ -366,7 +415,7 @@ smove();
 int x;
 for (x=0;x<=strlen(message);x++)
 	{
-	textcolor(SPECINVIS);		// Make the text invisible but still there so that stars will not overprint it
+	textcolor(BACK);		// Make the text invisible but still there so that stars will not overprint it
 	printf(" ");	
 	if (keypress()) break;
 	smove();
@@ -543,7 +592,7 @@ end   = (TRAILS-1);
 #if defined(SAM)
 sam_load_palette(fullcopper);
 #endif
-textcolor(TEXT);
+textcolor(SAMTEXT);
 textbackground(BACK);
 gotoxy(0,0);
 printf("TrailBlazer - Press key for next");
@@ -598,7 +647,7 @@ draw(line1x[start],line1y[start],line2x[start],line2y[start]);
 // Blank out last line of trail
 
 #if defined(SAM)
-textcolor(0);
+textcolor(BACK);
 draw(line1x[end], line1y[end], line2x[end], line2y[end]); 
 #endif
 #if defined(SPECTRUM)
@@ -621,7 +670,12 @@ moveon=0;
 
 void life()
 {
-textcolor(15);
+#if defined(SAM)
+textcolor(SAMTEXT);
+#endif
+#if defined(SPECTRUM)
+textcolor(TEXT);
+#endif
 setuplife();
 moveon=0;
 
@@ -773,6 +827,14 @@ world[row][col]-- ;
 void outro()
 {
 moveon=0;
+#if defined(SAM)
+outpreprinty(3,mess4);
+outpreprinty(6,mess5);
+outpreprinty(9,mess6);
+outpreprinty(12,mess7);
+outpreprinty(15,mess8);
+outpreprinty(18,mess9);
+#endif
 pstartup();
 
 while (!keypress())
@@ -791,6 +853,7 @@ while (!keypress())
 
     while (!moveon)
         {
+		#if defined(SAM)
         fadedown(11,copper);
         if (keypress()) break ;
 		fadedown(12,red);
@@ -806,6 +869,11 @@ while (!keypress())
         fadeup(13,blue);
 		if (keypress()) break ;
         fadeup(14,grey);
+		#endif	
+		#if defined(SPECTRUM)
+		if (keypress()) break ;
+		psmove();
+		#endif	
         }
     }
 moveon=0;
@@ -822,11 +890,21 @@ for (count=0;count<= (PSTARS-1);count++ )
     pstary[count] = rnd(191);
     pstars[count] = (count % 3)+1;
 
-    if (!point(pstarx[count],pstary[count]))
+    if (point(pstarx[count],pstary[count]) == NULL)
         {
+		pstarskip[count]=0;
+		#if defined(SAM)
         textcolor(pstars[count]);
+		#endif
+		#if defined(SPECTRUM)
+		textcolor(TEXT);
+		#endif
         plot(pstarx[count],pstary[count]);
         }
+	else
+		{
+		pstarskip[count]=1;
+		}
     }
 }
 
@@ -834,24 +912,50 @@ for (count=0;count<= (PSTARS-1);count++ )
 
 void psmove()
 {
-intrinsic_halt();	// Wait for start of next frame
+//intrinsic_halt();	// Wait for start of next frame
 for (count=0;count<= (PSTARS-1);count++ )
     {
-    if (point(pstarx[count],pstary[count]) < 4)
+    if (pstarskip[count] == 0)	// Blank old pixel is not ignored
         {
-        textcolor(0);
+        #if defined(SAM)
+		textcolor(BACK);
         plot(pstarx[count],pstary[count]);
+		#endif
+		#if defined(SPECTRUM)
+		unplot(pstarx[count],pstary[count]);
+		#endif
         }
 
     pstarx[count]+= pstars[count];
     if (pstarx[count] > 255) pstarx[count]=0;
 
-    if (!point(pstarx[count],pstary[count]))
+    if (point(pstarx[count],pstary[count]) == NULL)
         {
+		pstarskip[count]=0;
+		#if defined(SAM)
         textcolor(pstars[count]);
+		#endif
+		#if defined(SPECTRUM)
+		textcolor(TEXT);
+		#endif
         plot(pstarx[count],pstary[count]);
         }
+		else
+		{
+		pstarskip[count]=1;
+		}
     }
+}
+
+// Outro text pre print in invisible text so it's avoided by starfield
+
+void outpreprinty(int lineno, char *message)
+{
+#if defined(SAM)
+gotoxy((32-strlen(message))/2,lineno);
+textcolor(SAMINVIS);
+printf("%s",message);
+#endif
 }
 
 // Routine for printing outro texts
@@ -861,9 +965,15 @@ void outprinty(int lineno, char *message)
 int x;
 
 gotoxy((32-strlen(message))/2,lineno);
+
 for (x=0;x< strlen(message);x++ )
     {
+	#if defined(SAM)
     textcolor((x % 4)+11);
+	#endif
+	#if defined(SPECTRUM)
+    textcolor((lineno % 4)+11);
+    #endif
     printf("%c",message[x]);
 	if (keypress()) break ;
     psmove();
@@ -871,18 +981,17 @@ for (x=0;x< strlen(message);x++ )
 }
 
 // Outro Fade down
-
+#if defined(SAM)
 void fadedown(int colour, int *colset)
 {
+
 int x;
-#if defined(SAM)
 for (x=0;x<5;x++ )
     {
     sam_set_palette(colour,colset[x]);
     psmove();
     if (keypress()) break ;
     }
-#endif
 }
 
 // Outro Fade up
@@ -890,13 +999,12 @@ for (x=0;x<5;x++ )
 void fadeup(int colour, int *colset)
 {
 int x;
-#if defined(SAM)
 for (x=4;x>0;x-- )
     {
     sam_set_palette(colour,colset[x]);
     psmove();
     if (keypress()) break ;
     }
-#endif
-}
 
+}
+#endif
