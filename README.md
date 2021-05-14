@@ -1,6 +1,6 @@
 # Dan's SAM Coupé C programming stuff
 
-Subtitled 'Adventures in Cross Compiling' - trying to get my old SAM C programs working in Z88DK and some new ones too!
+Subtitled 'Adventures in Cross Compiling' - trying to get my old SAM C programs working in Z88DK https://github.com/z88dk/z88dk and some new ones too!
 
 Projects completed:
 
