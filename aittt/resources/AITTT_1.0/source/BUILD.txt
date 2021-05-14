@@ -1,0 +1,8 @@
+To build this program
+
+1) download and install a patched z88dk from http://www.z88dk.org/
+2) run compile.bat
+3) edit the provided .tzx file and put the result of the compilation,
+   a tap file, inside it (you must substitute the binary code in the
+   middle of it. I suggest ZX-Blockeditor for doing this:
+   http://home.arcor.de/clausjahn/spectrum/zxblockeditor/zxblockeditor.html
