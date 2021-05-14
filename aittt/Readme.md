@@ -6,6 +6,12 @@ https://www.marcellozaniboni.net/zxaittt/index.html
 
 SAM Coupé conversion plus retatining support for compiling under ZX Spectrum
 
+# Binaries
+
+Pre-built MGT (SAM) and TAP (ZX) images under binaries.
+
+Use on real hardware or in SimCoupé https://github.com/simonowen/simcoupe or for ZX, FUSE http://fuse-emulator.sourceforge.net/ or whichever emulator platform you favour.
+
 # Sam Coupé build
 
 zcc +sam -O3 ttt.c -lm -v -lndos -o ttt.bin -pragma-define:CRT_STACK_SIZE=2048 -pragma-define:CLIB_DEFAULT_SCREEN_MODE=-1
