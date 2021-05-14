@@ -1,0 +1,33 @@
+# Project: AITTT
+# Makefile created by Dev-C++ 4.9.9.2
+
+CPP  = g++.exe
+CC   = gcc.exe
+WINDRES = windres.exe
+RES  = AITTT_private.res
+OBJ  = ttt.o $(RES)
+LINKOBJ  = ttt.o $(RES)
+LIBS =  -L"C:/Programmi/Dev-Cpp/lib"  -s -march=i486 
+INCS =  -I"C:/Programmi/Dev-Cpp/include" 
+CXXINCS =  -I"C:/Programmi/Dev-Cpp/lib/gcc/mingw32/3.4.2/include"  -I"C:/Programmi/Dev-Cpp/include/c++/3.4.2/backward"  -I"C:/Programmi/Dev-Cpp/include/c++/3.4.2/mingw32"  -I"C:/Programmi/Dev-Cpp/include/c++/3.4.2"  -I"C:/Programmi/Dev-Cpp/include" 
+BIN  = AITTT.exe
+CXXFLAGS = $(CXXINCS)   -ansi -fexpensive-optimizations -O3 -march=i486
+CFLAGS = $(INCS)   -ansi -fexpensive-optimizations -O3 -march=i486
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before AITTT.exe all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+$(BIN): $(OBJ)
+	$(CC) $(LINKOBJ) -o "AITTT.exe" $(LIBS)
+
+ttt.o: ttt.c
+	$(CC) -c ttt.c -o ttt.o $(CFLAGS)
+
+AITTT_private.res: AITTT_private.rc 
+	$(WINDRES) -i AITTT_private.rc --input-format=rc -o AITTT_private.res -O coff 
