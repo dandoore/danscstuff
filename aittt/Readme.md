@@ -27,6 +27,7 @@ or use cc-sam.bat
 # ZX Spectrum build
 
 zcc +zx -O3 -zorg=36864 ttt.c -lm -v -lndos -o ttt.bin 
+
 z88dk-appmake +zx -b ttt.bin --org 36864 --screen zxscr.scr -o ttt.tap
 
 or use cc-zx.bat
