@@ -7,6 +7,7 @@ REM https://github.com/dandoore/mgtman
 
 set FILE=ttt
 set OUTPUT=ttt.cde
+set SCREEN=samscr.scr
 set EMUPATH="C:\Program Files (x86)\SimCoupe\simcoupe.exe"
 
 echo Compiling %FILE%.c... 
@@ -25,8 +26,12 @@ echo Renaming BIN to %OUTPUT%...
 rename %FILE% %OUTPUT%
 IF NOT %ERRORLEVEL% == 0  GOTO FAIL
 
-echo Copying auto.bin to %FILE%.mgt...
+echo Copying %OUTPUT% to %FILE%.mgt...
 mgtman -w %FILE%.mgt %OUTPUT% 32768 
+IF NOT %ERRORLEVEL% == 0  GOTO FAIL
+
+echo Copying %SCREEN% to %FILE%.mgt...
+mgtman -ws3 %FILE%.mgt %SCREEN% 
 IF NOT %ERRORLEVEL% == 0  GOTO FAIL
 
 echo Removing binary %OUTPUT%...
