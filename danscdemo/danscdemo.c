@@ -51,9 +51,9 @@
 #include <interrupt.h>
 
 #if defined(SAM)
+#include <arch/sam.h>
 #include <psg/etracker.h>
 #include <sys/ioctl.h>
-#include <arch/sam.h>
 #endif
 
 #if defined(SPECTRUM)
@@ -93,8 +93,8 @@ void outprinty(int x, char *y);
 
 // Defines
 
-#define STARS  30   // Number of stars in centre starfield in Intro
-#define SPREAD 30   // Birth range spread of new stars in centre starfield
+#define STARS 30	// Number of stars in centre starfield in Intro
+#define SPREAD 30	// Birth range spread of new stars in centre starfield
 
 #define TEXT 7		// Default foreground colour
 #define BACK 0		// Default background colour
@@ -108,8 +108,8 @@ void outprinty(int x, char *y);
 #define MAXX 255	// Trailblazer max x
 #define	MAXY 192	// Trailblazer max y
 
-#define ROWS  21    // Life size y rows
-#define COLS  32    // Life size x columns
+#define ROWS 21		// Life size y rows
+#define COLS 32		// Life size x columns
 #define LIFESEED	46256  // Because everyone wants a happy life. This seed is known good for 350 generations
 
 #define PSTARS 20   // Number of parallax stars in Outro
@@ -175,7 +175,7 @@ clrscr();
 
 // Clear out anything in the keyboard first
 while (keypress());
-	
+
 // Music setup
 ay_vt2_init(&mysong);
 ay_vt2_start();
@@ -183,7 +183,7 @@ setup_int();
 #endif
 
 while (1)
-    {
+	{
 	#if defined(SAM)
 	sam_load_palette(defaultpal);
 	#endif
@@ -227,7 +227,7 @@ M_RESTORE_MAIN;
 // SAM Etracker tune
 
 #if defined(SAM)
-extern char mysong;	
+extern char mysong;
 
 // Setup interrupt tracker player
 
@@ -272,7 +272,6 @@ char dummyval;
 
 // Clear the screen in a slightly more interesting way
 // This is really slow at the moment :(
-// BUG: And doesn't work on ZX for some reason
 
 void cleary()
 {
@@ -287,6 +286,12 @@ for (x=MINX;x<= MAXX;x+= 2 )
 #endif
 
 #if defined(SPECTRUM)
+int x;
+for (x=MINX;x<= MAXX;x+=2)
+	{
+	undraw(x,(MINY+1),x,(MAXY-1));
+	undraw(MAXX-x,(MINY+1),MAXX-x,(MAXY-1));
+	}
 textcolor(TEXT);
 textbackground(BACK);
 zx_border(BACK);
@@ -361,21 +366,21 @@ int x;
 
 gotoxy((32-strlen(message))/2,lineno);
 for (x=0;x< strlen(message);x++ )
-    {
-    #if defined(SAM)
+	{
+	#if defined(SAM)
 	textcolor(colour);
 	#endif
 	#if defined(SPECTRUM)
 	textcolor(colour-10);
 	#endif
-    printf("%c",message[x]);
-    if (keypress())
+	printf("%c",message[x]);
+	if (keypress())
 		{
 		moveon=1;
 		break;
 		}
-    smove();
-    }
+	smove();
+	}
 }
 
 // Fade colour pot using a colour range
@@ -434,7 +439,7 @@ for (count=0;count<= (STARS-1);count++ )
     {
     starx[count] = (rnd(SPREAD)+(cx-(SPREAD/2)));
     stary[count] = (rnd(SPREAD)+(cy-(SPREAD/2)));
-    if (point(starx[count],stary[count]) == NULL)
+    if (point(starx[count],stary[count]) == NULL) 	// zx_pxy2aaddr(px,py) will return the attribute address corresponding to the given (x,y) pixel coordinate
 		{
 	    starskip[count] = 0;
         plot(starx[count],stary[count]);
