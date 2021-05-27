@@ -113,7 +113,6 @@ void outprinty(int x, char *y);
 #define LIFESEED	46256  // Because everyone wants a happy life. This seed is known good for 350 generations
 
 #define PSTARS 20   // Number of parallax stars in Outro
-
 	
 // Globals
 
@@ -254,20 +253,14 @@ return abs(abs(rand())/(32768/range));
 }
 
 // Detect Keypress Routine
-//
-// This is a bit wacky at the moment due to ZX and SAM presenting keypresses differently
+
 
 int keypress()
 {
 char dummyval;
 	if (kbhit())
 		{
-		#if defined(SAM)
-		while (!kbhit());	// Suck up duplicates
-		#endif
-		#if defined(SPECTRUM)
 		dummyval=getch();
-		#endif
 		moveon=1;
 		return(1);
 		}
