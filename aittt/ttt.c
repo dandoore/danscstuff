@@ -43,6 +43,8 @@
 
 #include <stdio.h>
 
+#include <conio.h>
+
 #include <stdlib.h>
 
 #include <malloc.h>
@@ -51,18 +53,17 @@
 
 #include <string.h>
 
-#if defined SPECTRUM || defined SAM#include <sound.h>
-
+#if defined SPECTRUM || defined SAM
+#include <sound.h>
 #include <graphics.h>
-
 #endif
 
-#if defined SAM#include <arch/sam.h>
-
+#if defined SAM
+#include <arch/sam.h>
 #endif
 
-#if!defined SPECTRUM || !defined SAM#include <unistd.h>
-
+#if!defined SPECTRUM || !defined SAM
+#include <unistd.h>
 #endif
 
 /* board size */
